@@ -259,6 +259,10 @@ var wakaEnv;
  * @suppress {undefinedVars}
  */
 var wakaBuffer;
+/**
+ * @suppress {undefinedVars}
+ */
+var __magic__;
 
 
 // Browser externs on global window object.

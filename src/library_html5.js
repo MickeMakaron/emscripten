@@ -2672,6 +2672,23 @@ var LibraryJSEvents = {
     return requestAnimationFrame(tick);
   },
 
+  // TODO(sbc): USe MIN_XX_VERSION settings to avoid this polyfill on modern browsers.
+  $polyfillGlobalThis: function() {
+    // nop, used to pulli in globalThis__postset
+  },
+
+  $polyfillGlobalThis__postset: `
+    (function() {
+      if (typeof globalThis === 'object') return;
+      Object.prototype.__defineGetter__('__magic__', function() {
+        return this;
+      });
+      __magic__.globalThis = __magic__; // lolwat
+      delete Object.prototype.__magic__;
+    }());
+  `,
+
+  $polyfillSetImmediate__deps: ['$polyfillGlobalThis'],
   $polyfillSetImmediate__postset:
     'var __setImmediate_id_counter = 0;\n' +
     'var __setImmediate_queue = [];\n' +
@@ -2685,17 +2702,21 @@ var LibraryJSEvents = {
     '}\n' +
     'if (typeof setImmediate === "undefined" && typeof addEventListener === "function") {\n' +
       'addEventListener("message", __setImmediate_cb, true);\n' +
-      'setImmediate = function(func) {\n' +
+      'globalThis.setImmediate = function(func) {\n' +
         'postMessage(__setImmediate_message_id, "*");\n' +
         'return __setImmediate_id_counter + __setImmediate_queue.push(func) - 1;\n' +
       '}\n' +
-      'clearImmediate = /**@type{function(number=)}*/(function(id) {\n' +
+      'globalThis.clearImmediate = /**@type{function(number=)}*/(function(id) {\n' +
         'var index = id - __setImmediate_id_counter;\n' +
         'if (index >= 0 && index < __setImmediate_queue.length) __setImmediate_queue[index] = function() {};\n' + // must preserve the order and count of elements in the queue, so replace the pending callback with an empty function
       '})\n' +
     '}',
 
-  $polyfillSetImmediate: function() { /* nop, used for its postset to ensure setImmediate() polyfill is not duplicated between emscripten_set_immediate() and emscripten_set_immediate_loop() if application links to both of them.*/ },
+  $polyfillSetImmediate: function() {
+    // nop, used for its postset to ensure setImmediate() polyfill is
+    // not duplicated between emscripten_set_immediate() and
+    // emscripten_set_immediate_loop() if application links to both of them.
+  },
 
   emscripten_set_immediate__deps: ['$polyfillSetImmediate'],
   emscripten_set_immediate: function(cb, userData) {
